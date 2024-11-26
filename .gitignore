@@ -2,11 +2,12 @@ dataset/
 scripts/
 int8_models/
 logs/
-*.pt
 slurm_log/
 .DS_Store
 
-*.pt
+*.zst
+# .pt except for files in act_scales
+!smoothquant/act_scales/*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
