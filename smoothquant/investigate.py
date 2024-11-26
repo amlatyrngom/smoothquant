@@ -231,6 +231,9 @@ def make_setups():
                     if q_group_size == 0 and q_protect:
                         # Protection only enabled for q_group_size > 0
                         continue
+                    if q_protection_scale > 0 and not q_protect:
+                        # Pointless duplication.
+                        continue
                     q_protection_ratio = 0.03
                     q_smoothing_strength = 0.5
                     setups.append(make_setup(n_bits, q_group_size, q_protect, q_protection_scale, q_protection_ratio, q_smoothing_strength))
@@ -252,15 +255,16 @@ def sweep(short_model_name, repo_dir, save_dir, perp=True):
         investigation = Investigation(short_model_name, repo_dir, **setups[0])
         base_results = investigation.evaluate_base_model(perp=perp)
         results["base"] = base_results
-        print(f"Base model results: {base_results}")
+        print(f"Base FP16: {base_results}")
     else:
         print("Base model already run")
     for setup in setups:
         setup_key = str(setup)
+        base_expt_name = setup_name(setup)
         if setup_key in results:
-            print(f"Setup {setup} already run")
+            print(f"Setup {base_expt_name} already run")
             continue
-        print(f"Running setup {setup}")
+        print(f"Running setup {base_expt_name}")
         investigation = Investigation(short_model_name, repo_dir, **setup)
         q_res = investigation.evaluate_quantized_model(perp=perp)
         q_smooth_res = investigation.evaluate_smooth_model(perp=perp)
@@ -269,7 +273,10 @@ def sweep(short_model_name, repo_dir, save_dir, perp=True):
             "q_res": q_res,
             "q_smooth_res": q_smooth_res,
         }
-        print(f"Results for {setup}: Q={res["q_res"]}, Q+Smooth={res["q_smooth_res"]}")
+        simple_expt_name = f"{base_expt_name}"
+        smooth_expt_name = f"Smooth {base_expt_name}"
+        print(f"{simple_expt_name}: {res['q_res']}")
+        print(f"{smooth_expt_name}: {res['q_smooth_res']}")
         results[setup_key] = res
         # Checkpointing
         with open(result_file, "wb") as f:
@@ -284,12 +291,13 @@ def report_sweep(short_model_name, save_dir):
         results = pkl.load(f)
     base_result = results["base"]
     print(f"Base FP16: {base_result}")
-    for setup_key, res in results.items():
-        if setup_key == "base":
-            continue
+    setups = make_setups()
+    for setup in setups:
+        setup_key = str(setup)
+        res = results[setup_key]
         setup = res["setup"]
         base_expt_name = setup_name(setup)
         simple_expt_name = f"{base_expt_name}"
         smooth_expt_name = f"Smooth {base_expt_name}"
-        print(f"{simple_expt_name}: {res["q_res"]}")
-        print(f"{smooth_expt_name}: {res["q_smooth_res"]}")
+        print(f"{simple_expt_name}: {res['q_res']}")
+        print(f"{smooth_expt_name}: {res['q_smooth_res']}")
