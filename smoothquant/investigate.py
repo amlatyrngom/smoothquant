@@ -290,7 +290,7 @@ def report_sweep(short_model_name, save_dir):
     with open(result_file, "rb") as f:
         results = pkl.load(f)
     base_result = results["base"]
-    print(f"Base FP16: {base_result}")
+    print(f"Base FP16,{base_result}")
     setups = make_setups()
     for setup in setups:
         setup_key = str(setup)
@@ -299,5 +299,5 @@ def report_sweep(short_model_name, save_dir):
         base_expt_name = setup_name(setup)
         simple_expt_name = f"{base_expt_name}"
         smooth_expt_name = f"Smooth {base_expt_name}"
-        print(f"{simple_expt_name}: {res['q_res']}")
-        print(f"{smooth_expt_name}: {res['q_smooth_res']}")
+        print(f"{simple_expt_name},{res['q_res']}")
+        print(f"{smooth_expt_name},{res['q_smooth_res']}")
