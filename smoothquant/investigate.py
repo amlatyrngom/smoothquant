@@ -94,14 +94,16 @@ class Investigation:
         ):
         if short_model_name.startswith("opt"):
             self.model_name = f"facebook/{short_model_name}"
-        elif short_model_name.startswith("llama"):
+        elif short_model_name.startswith("llama-2"):
             self.model_name = f"meta-llama/{short_model_name}-hf"
+        elif short_model_name.startswith("llama-3"):
+            self.model_name = f"meta-llama/{short_model_name}"
         else:
             raise ValueError("Unknown model name")
         scales_path = f"{repo_dir}/act_scales/{short_model_name}.pt"
         assert os.path.exists(scales_path), f"Cannot find the act scales at {scales_path}"
         self.act_scales = torch.load(scales_path)
-        acc_tokenizer = GPT2Tokenizer.from_pretrained(self.model_name)
+        acc_tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=False)
         perp_tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=False)
         acc_dataset = load_dataset("lambada", split=f"validation[:{n_samples}]")
         perp_dataset = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
