@@ -2,11 +2,6 @@ import torch
 import tqdm
 import os
 from torch import nn
-from transformers.models.opt.modeling_opt import (
-    OPTAttention,
-    OPTDecoderLayer,
-    OPTForCausalLM,
-)
 from transformers import GPT2Tokenizer
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from smoothquant.smooth import smooth_lm
@@ -125,7 +120,7 @@ class Investigation:
 
     def make_base_model(self):
         print("Making base model...")
-        model_fp16 = OPTForCausalLM.from_pretrained(
+        model_fp16 = AutoModelForCausalLM.from_pretrained(
             self.model_name, torch_dtype=torch.float16, device_map="auto"
         )
         print("Done making base model.")
