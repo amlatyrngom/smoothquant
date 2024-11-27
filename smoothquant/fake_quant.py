@@ -225,7 +225,7 @@ class WQAQLinear(nn.Module):
             new_module.weight_quant_name = f"group_quant_{q_group_size}"
         elif weight_quant == "per_channel":
             new_module.weight = quantize_weight_per_channel_absmax(
-                module.weight, n_bits=n_bits, group_size=q_group_size
+                module.weight, n_bits=n_bits
             )
             new_module.weight_quant_name = weight_quant
         elif weight_quant == "per_tensor":
