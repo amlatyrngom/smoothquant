@@ -224,12 +224,18 @@ def make_setups():
     for n_bits in [4, 8]:
         for q_group_size in [0, 128]:
             for q_protect in [False, True]:
+                if q_protect:
+                    # TODO: Remove when AWQ correctly implemented.
+                    continue
                 for q_protection_scale in [0.0, 2.0]:
                     if q_group_size == 0 and q_protect:
                         # Protection only enabled for q_group_size > 0
                         continue
                     if q_protection_scale > 0 and not q_protect:
                         # Pointless duplication.
+                        continue
+                    if n_bits == 8 and q_protect:
+                        # No point in AWQ baseline for 8-bit.
                         continue
                     q_protection_ratio = 0.03
                     q_smoothing_strength = 0.5
