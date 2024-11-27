@@ -10,7 +10,7 @@ from transformers.models.opt.modeling_opt import (
 from transformers import GPT2Tokenizer
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from smoothquant.smooth import smooth_lm
-from smoothquant.fake_quant import WQAQLinear, quantize_opt
+from smoothquant.fake_quant import WQAQLinear, quantize_model
 from datasets import load_dataset
 import pickle as pkl
 
@@ -142,7 +142,7 @@ class Investigation:
     def make_quantized_model(self):
         model_fp16 = self.make_base_model()
         print("Quantizing model...")
-        q_model = quantize_opt(
+        q_model = quantize_model(
             model_fp16,
             n_bits=self.n_bits,
             q_group_size=self.q_group_size,
@@ -170,7 +170,7 @@ class Investigation:
         smooth_lm(model, self.act_scales, self.q_smoothing_strength)
         print("Done smoothing model.")
         print("Quantizing model...")
-        q_model = quantize_opt(
+        q_model = quantize_model(
             model,
             n_bits=self.n_bits,
             q_group_size=self.q_group_size,
