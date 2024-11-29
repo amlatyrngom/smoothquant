@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from functools import partial
+import copy
 
 # core quantization method (simulated quantization)
 @torch.no_grad()
@@ -48,6 +49,9 @@ def pseudo_quantize_tensor(w, n_bits, q_group_size):
 def pseudo_quantize_tensor_with_protection(w, n_bits, q_group_size, q_protection_ratio, q_protection_scale):
     assert q_protection_ratio >= 0.0 - 1e-5
     assert q_protection_scale >= 0.0 - 1e-5
+    if q_protection_ratio <= 1e-5:
+        # No activation protection
+        return pseudo_quantize_tensor(w, n_bits, q_group_size)
     importance = sum(w.abs()).float()
     k = int(q_protection_ratio * len(importance))
     _, outlier_mask = torch.topk(importance, k=k, largest=True)
@@ -148,7 +152,6 @@ class WQAQLinear(nn.Module):
             )
         else:
             self.register_buffer("bias", None)
-
         if q_protect:
             assert q_protection_ratio > -1e-5
             assert q_protection_scale > -1e-5
@@ -156,10 +159,10 @@ class WQAQLinear(nn.Module):
             self.act_quant_name = f"protected_group_quant_{q_group_size}"
             self.act_quant = partial(
                 pseudo_quantize_tensor_with_protection,
-                n_bits=n_bits, q_group_size=q_group_size, q_protect=q_protect,
+                n_bits=n_bits, q_group_size=q_group_size,
                 q_protection_ratio=q_protection_ratio, q_protection_scale=q_protection_scale,
             )
-        if q_group_size > 0:
+        elif q_group_size > 0:
             self.act_quant_name = f"group_quant_{q_group_size}"
             self.act_quant = partial(pseudo_quantize_tensor, n_bits=self.n_bits, q_group_size=self.q_group_size)
         elif act_quant == "per_token":
@@ -208,15 +211,15 @@ class WQAQLinear(nn.Module):
             quantize_output=quantize_output,
             n_bits=n_bits,
             q_group_size=q_group_size,
+            q_protect=q_protect,
+            q_protection_ratio=q_protection_ratio,
+            q_protection_scale=q_protection_scale,
         )
         if q_protect:
             assert q_protection_ratio > -1e-5
             assert q_protection_scale > -1e-5
             assert q_group_size > 0
-            new_module.weight = pseudo_quantize_tensor_with_protection(
-                module.weight, n_bits=n_bits, q_group_size=q_group_size,
-                q_protection_ratio=q_protection_ratio, q_protection_scale=q_protection_scale
-            )
+            new_module.weight = copy.deepcopy(module.weight) # Already quantized by AWQ.
             new_module.weight_quant_name = f"protected_group_quant_{q_group_size}"
         elif q_group_size > 0:
             new_module.weight = pseudo_quantize_tensor(
