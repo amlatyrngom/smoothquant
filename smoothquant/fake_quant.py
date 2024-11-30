@@ -23,9 +23,13 @@ def pseudo_quantize_tensor(w, n_bits, q_group_size):
         min_val = w.amin(dim=1, keepdim=True)
         assert min_val.dim() == 2 and min_val.size(0) == w.size(0) and min_val.size(1) == 1
     except RuntimeError as e:
-        print("Error in amax or amin")
+        print("\nError in amax or amin")
         print(w.shape)
+        # count nans and infs
+        print(f"Nans: {torch.isnan(w).sum()}")
+        print(f"Infs: {torch.isinf(w).sum()}")
         raise e
+    
 
     # Calculate the scale factor and zero point.  (Formula 1 & 2)
     max_int = 2 ** n_bits - 1
