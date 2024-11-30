@@ -10,17 +10,22 @@ def pseudo_quantize_tensor(w, n_bits, q_group_size):
     assert q_group_size > 0
     org_w_shape = w.shape
     if q_group_size > 0:
-        # assert org_w_shape[-1] % q_group_size == 0
+        assert org_w_shape[-1] % q_group_size == 0
         w = w.reshape(-1, q_group_size)
 
     assert w.dim() == 2, f"Invalid weight shape: {w.shape}"
     # Set nans to zero
     w[torch.isnan(w)] = 0.0
     # Calculate the maximum (\alpha) and minimum values (\beta) in the tensor.
-    max_val = w.amax(dim=1, keepdim=True)
-    assert max_val.dim() == 2 and max_val.size(0) == w.size(0) and max_val.size(1) == 1
-    min_val = w.amin(dim=1, keepdim=True)
-    assert min_val.dim() == 2 and min_val.size(0) == w.size(0) and min_val.size(1) == 1
+    try:
+        max_val = w.amax(dim=1, keepdim=True)
+        assert max_val.dim() == 2 and max_val.size(0) == w.size(0) and max_val.size(1) == 1
+        min_val = w.amin(dim=1, keepdim=True)
+        assert min_val.dim() == 2 and min_val.size(0) == w.size(0) and min_val.size(1) == 1
+    except RuntimeError as e:
+        print("Error in amax or amin")
+        print(w.shape)
+        raise e
 
     # Calculate the scale factor and zero point.  (Formula 1 & 2)
     max_int = 2 ** n_bits - 1
