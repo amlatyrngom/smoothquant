@@ -17,9 +17,10 @@ def pseudo_quantize_tensor(w, n_bits, q_group_size):
     # Set nans to zero
     w[torch.isnan(w)] = 0.0
     w[torch.isinf(w)] = 0.0
-    print(f"nans: {torch.isnan(w).sum()}")
-    print(f"infs: {torch.isinf(w).sum()}")
     print(f"dtype: {w.dtype}")
+    print(f"shape: {w.shape}")
+    print(f"nans: {torch.isnan(w).sum().item()}")
+    print(f"infs: {torch.isinf(w).sum().item()}")
     # Calculate the maximum (\alpha) and minimum values (\beta) in the tensor.
     try:
         max_val = w.amax(dim=1, keepdim=True)
@@ -66,6 +67,11 @@ def pseudo_quantize_tensor_with_protection(w, n_bits, q_group_size, q_protection
     if q_protection_ratio <= 1e-5:
         # No activation protection
         return pseudo_quantize_tensor(w, n_bits, q_group_size)
+    print(f"Out dtype {q_protection_scale}, {q_protection_ratio}: {w.dtype}")
+    print(f"Out shape: {w.shape}")
+    print(f"Out nans: {torch.isnan(w).sum().item()}")
+    print(f"Out infs: {torch.isinf(w).sum().item()}")
+
     importance = sum(w.abs()).float()
     k = int(q_protection_ratio * len(importance))
     _, outlier_mask = torch.topk(importance, k=k, largest=True)
