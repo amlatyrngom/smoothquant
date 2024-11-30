@@ -16,6 +16,8 @@ def pseudo_quantize_tensor(w, n_bits, q_group_size):
     assert w.dim() == 2, f"Invalid weight shape: {w.shape}"
     # Set nans to zero
     w[torch.isnan(w)] = 0.0
+    w[torch.isinf(w)] = 0.0
+
     # Calculate the maximum (\alpha) and minimum values (\beta) in the tensor.
     try:
         max_val = w.amax(dim=1, keepdim=True)
