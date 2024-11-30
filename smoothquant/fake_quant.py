@@ -17,10 +17,10 @@ def pseudo_quantize_tensor(w, n_bits, q_group_size):
     # Set nans to zero
     w[torch.isnan(w)] = 0.0
     w[torch.isinf(w)] = 0.0
-    print(f"dtype: {w.dtype}")
-    print(f"shape: {w.shape}")
-    print(f"nans: {torch.isnan(w).sum().item()}")
-    print(f"infs: {torch.isinf(w).sum().item()}")
+    # print(f"dtype: {w.dtype}")
+    # print(f"shape: {w.shape}")
+    # print(f"nans: {torch.isnan(w).sum().item()}")
+    # print(f"infs: {torch.isinf(w).sum().item()}")
     # Calculate the maximum (\alpha) and minimum values (\beta) in the tensor.
     try:
         max_val = w.amax(dim=1, keepdim=True)
@@ -67,22 +67,28 @@ def pseudo_quantize_tensor_with_protection(w, n_bits, q_group_size, q_protection
     if q_protection_ratio <= 1e-5:
         # No activation protection
         return pseudo_quantize_tensor(w, n_bits, q_group_size)
-    print(f"Out dtype {q_protection_scale}, {q_protection_ratio}: {w.dtype}")
-    print(f"Out shape: {w.shape}")
-    print(f"Out nans: {torch.isnan(w).sum().item()}")
-    print(f"Out infs: {torch.isinf(w).sum().item()}")
-
-    importance = sum(w.abs()).float()
+    # print(f"Out dtype {q_protection_scale}, {q_protection_ratio}: {w.dtype}")
+    # print(f"Out shape: {w.shape}")
+    # print(f"Out nans: {torch.isnan(w).sum().item()}")
+    # print(f"Out infs: {torch.isinf(w).sum().item()}")
+    w_shape = w.shape
+    w = w.view(-1, w_shape[-1])
+    # print(f"Out shape2: {w.shape}")
+    importance = w.abs().sum(dim=-1)
+    # print(f"Importance shape C: {importance.shape}")
     k = int(q_protection_ratio * len(importance))
     _, outlier_mask = torch.topk(importance, k=k, largest=True)
+    # print(f"Outlier Mask shape: {outlier_mask.shape}")
     if q_protection_scale >= 1.0:
         w.data[:, outlier_mask] *= q_protection_scale
         w = pseudo_quantize_tensor(w, n_bits, q_group_size)
         w.data[:, outlier_mask] /= q_protection_scale
     else:
-        outlier = w.data[:, outlier_mask]
+        outlier = w.data[outlier_mask, :]
+        # print(f"Outlier shape: {outlier.shape}")
         w = pseudo_quantize_tensor(w, n_bits, q_group_size)
-        w.data[:, outlier_mask] = outlier
+        w.data[outlier_mask, :] = outlier
+    w = w.view(w_shape)
     return w
 
 
