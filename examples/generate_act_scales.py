@@ -8,12 +8,34 @@ from transformers import (
 import argparse
 
 from smoothquant.calibration import get_act_scales
+# AWQ
+from huggingface_hub import hf_hub_download
+from awq.quantize.pre_quant import apply_awq
 
 
-def build_model_and_tokenizer(model_name):
+def get_short_model_name(model_name):
+    short_names = ["opt-125m", "opt-1.3b", "opt-6.7b", "opt-13b", "llama-2-7b"]
+    for short_name in short_names:
+        if short_name in model_name:
+            return short_name
+    raise NotImplementedError(f"Model name {model_name} is not supported for AWQ. Add it to the list of supported models!!")
+
+
+def build_model_and_tokenizer(model_name, awq=False):
     tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
     kwargs = {"torch_dtype": torch.float16, "device_map": "sequential"}
     model = AutoModelForCausalLM.from_pretrained(model_name, **kwargs)
+    original_device = model.device
+    if awq:
+        awq_zoo = "mit-han-lab/awq-model-zoo"
+        short_model_name = get_short_model_name(model_name)
+        awq_pt_name = f"{short_model_name}-w4-g128.pt"
+        awq_pt_filename = hf_hub_download(repo_id=awq_zoo, filename=awq_pt_name, repo_type="dataset")
+        awq_pt = torch.load(awq_pt_filename, map_location="cpu")
+        print(f"Applying AWQ to model {model_name} using {awq_pt_name}")
+        apply_awq(model, awq_pt)
+        print("AWQ applied successfully")
+    model.to(original_device)
     return model, tokenizer
 
 
@@ -34,6 +56,12 @@ def parse_args():
         default="dataset/val.jsonl.zst",
         help="location of the calibration dataset, we use the validation set of the Pile dataset",
     )
+    parser.add_argument(
+        "--awq",
+        action="store_true",
+        default=False,
+        help="whether to use the AWQ quantization method",
+    )
     parser.add_argument("--num-samples", type=int, default=512)
     parser.add_argument("--seq-len", type=int, default=512)
     args = parser.parse_args()
@@ -43,7 +71,7 @@ def parse_args():
 @torch.no_grad()
 def main():
     args = parse_args()
-    model, tokenizer = build_model_and_tokenizer(args.model_name)
+    model, tokenizer = build_model_and_tokenizer(args.model_name, args.awq)
 
     if not os.path.exists(args.dataset_path):
         print(f"Cannot find the dataset at {args.dataset_path}")
