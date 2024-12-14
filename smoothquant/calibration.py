@@ -36,7 +36,14 @@ def get_act_scales(model, tokenizer, dataset_path, num_samples=512, seq_len=512)
                 m.register_forward_hook(functools.partial(stat_input_hook, name=name))
             )
 
-    dataset = load_dataset("json", data_files=dataset_path, split="train")
+    print(f"get_act_scales using dataset_path {dataset_path}")
+    dataset_cache_dir = "/state/partition1/user/zzhang1/cache/huggingface/datasets"
+    dataset = load_dataset(
+        "json",
+        data_files=dataset_path, # This should be where val.json1.zst is
+        split="train",
+        cache_dir=dataset_cache_dir # This should be where val.json1.zst is
+    )
     dataset = dataset.shuffle(seed=42)
 
     for i in tqdm(range(num_samples)):
@@ -44,7 +51,7 @@ def get_act_scales(model, tokenizer, dataset_path, num_samples=512, seq_len=512)
             dataset[i]["text"], return_tensors="pt", max_length=seq_len, truncation=True
         ).input_ids.to(device)
         model(input_ids)
-
+    
     for h in hooks:
         h.remove()
 
